@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "flow-mcp-server": {
+      "command": "node",
+      "args": ["/Users/oyvindfanebust/src/poc/flow-mcp-poc/dist/index.js"],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "flow-mcp-server-dev": {
+      "command": "npx",
+      "args": ["tsx", "/Users/oyvindfanebust/src/poc/flow-mcp-poc/src/index.ts"],
+      "env": {}
+    }
+  }
+}
