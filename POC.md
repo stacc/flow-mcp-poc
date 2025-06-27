@@ -1,40 +1,61 @@
 # Flow MCP POC
 
 ## Goal ✅ COMPLETE
-Prove MCP protocol works with Flow API by adding **one resource**.
+Prove MCP protocol works with Flow API with HTTP transport.
 
 ## Implementation 
-Added to `src/server.ts`:
+**Two server variants:**
+- `src/server.ts` - Original STDIO transport
+- `src/http-server.ts` - New HTTP/SSE transport
 
-- Resource capability declaration
-- `ListResourcesRequestSchema` handler
-- `ReadResourceRequestSchema` handler  
-- Resource URI pattern: `flow://flows/{flowId}`
+## HTTP Server Features
+- **SSE endpoint**: `GET /sse` - establishes MCP connection
+- **Message endpoint**: `POST /message` - sends MCP messages  
+- **Health check**: `GET /health` - server status
+- **CORS enabled** for web clients
+- **Express.js** based HTTP server
 
-## Test
+## Usage
 ```bash
-npm run build   # ✅ Passes
-npm run typecheck   # ✅ Passes
+# STDIO version (original)
+npm run dev
 
-# MCP client can now:
-# 1. List resources - will show "Flow State" resource
-# 2. Read flow://flows/{flowId} - returns flow data as JSON
+# HTTP version (new)
+npm run dev:http   # Runs on http://localhost:3003
+# Note: Port 3001 conflicts with OrbStack, using 3003
+
+# Production builds  
+npm run start      # STDIO
+npm run start:http # HTTP
+
+# Test server
+curl http://localhost:3003/health
 ```
+
+## Fixed Issues
+- ✅ Port conflict (3001 → 3003) 
+- ✅ Server binding to all interfaces (0.0.0.0)
+- ✅ Process lifecycle management
 
 ## Result
-✅ **POC Complete** - MCP now works with Flow API
+✅ **POC Complete** - MCP now works with Flow API via HTTP
 
-The server now supports all three MCP primitives:
-- **Tools** (existing) - 8 Flow API operations
-- **Resources** (new) - Flow state data access via `flow://flows/{flowId}`
-- **Prompts** (new) - Friendly loan advisor with personality
+**Supports all MCP primitives:**
+- **Tools** - 4 Flow API operations (simplified for POC)
+- **Resources** - `flow://flows/{flowId}` returns flow data  
+- **Prompts** - Funny loan advisor with personality
 
-## Prompt Example
+**Transport options:**
+- **STDIO** - For command-line MCP clients
+- **HTTP/SSE** - For web applications and HTTP clients
+
+## Tests ✅
+```bash
+npm run test   # All tests pass
+# - HTTP server functionality 
+# - MCP protocol compliance
+# - Tool/Resource/Prompt implementations
+# - Error handling and security
 ```
-MCP Client: prompts/get loan-advisor {"customerType": "individual", "loanAmount": 500000}
 
-Returns: Funny, helpful loan guidance with emojis and jokes like:
-"🎉 Welcome to the magical world of loans! An individual loan! Perfect - just one person to blame when things get interesting! 😉"
-```
-
-Ready for MCP client integration.
+Ready for both CLI and web MCP client integration.
