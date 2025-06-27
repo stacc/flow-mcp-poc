@@ -76,7 +76,7 @@ describe('FlowMCPServer', () => {
   });
 
   describe('list tools handler', () => {
-    it('should return echo tool', async () => {
+    it('should return Flow API tools', async () => {
       server = new FlowMCPServer();
       
       // Get the handler function that was registered
@@ -87,24 +87,43 @@ describe('FlowMCPServer', () => {
       
       const result = await listToolsHandler();
       
-      expect(result).toEqual({
-        tools: [
-          {
-            name: 'echo',
-            description: 'Echo back the input text',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                text: {
-                  type: 'string',
-                  description: 'Text to echo back',
-                },
-              },
-              required: ['text'],
-            },
-          },
-        ],
-      });
+      expect(result.tools).toHaveLength(8);
+      expect(result.tools).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: 'start_flow',
+            description: 'Start a new flow process (e.g., loan application)',
+          }),
+          expect.objectContaining({
+            name: 'get_flow',
+            description: 'Get flow details by ID',
+          }),
+          expect.objectContaining({
+            name: 'get_flow_status',
+            description: 'Get flow status and tasks',
+          }),
+          expect.objectContaining({
+            name: 'get_task',
+            description: 'Get task details by task ID',
+          }),
+          expect.objectContaining({
+            name: 'complete_task',
+            description: 'Complete a task with the provided data',
+          }),
+          expect.objectContaining({
+            name: 'get_flow_schema',
+            description: 'Get schema for a flow definition',
+          }),
+          expect.objectContaining({
+            name: 'get_task_schema',
+            description: 'Get schema for a specific task type',
+          }),
+          expect.objectContaining({
+            name: 'get_api_status',
+            description: 'Check API health status',
+          }),
+        ])
+      );
     });
   });
 
@@ -121,11 +140,11 @@ describe('FlowMCPServer', () => {
       expect(callToolHandler).toBeDefined();
     });
 
-    it('should handle echo tool with valid arguments', async () => {
+    it('should handle get_api_status tool', async () => {
       const request = {
         params: {
-          name: 'echo',
-          arguments: { text: 'Hello, World!' },
+          name: 'get_api_status',
+          arguments: {},
         },
       };
       
@@ -135,16 +154,17 @@ describe('FlowMCPServer', () => {
         content: [
           {
             type: 'text',
-            text: 'Echo: Hello, World!',
+            text: expect.stringContaining('status'),
           },
         ],
+        isError: undefined,
       });
     });
 
-    it('should handle echo tool with empty arguments', async () => {
+    it('should handle missing arguments with error', async () => {
       const request = {
         params: {
-          name: 'echo',
+          name: 'start_flow',
           arguments: undefined,
         },
       };
@@ -155,16 +175,38 @@ describe('FlowMCPServer', () => {
         content: [
           {
             type: 'text',
-            text: 'Echo: ',
+            text: 'Error: Missing arguments',
           },
         ],
+        isError: true,
       });
     });
 
-    it('should handle echo tool with missing text property', async () => {
+    it('should handle API errors gracefully', async () => {
       const request = {
         params: {
-          name: 'echo',
+          name: 'get_flow',
+          arguments: { flowId: 'invalid-flow-id' },
+        },
+      };
+      
+      const result = await callToolHandler(request);
+      
+      expect(result).toEqual({
+        content: [
+          {
+            type: 'text',
+            text: expect.stringContaining('Error:'),
+          },
+        ],
+        isError: true,
+      });
+    });
+
+    it('should return error for unknown tool', async () => {
+      const request = {
+        params: {
+          name: 'unknown-tool',
           arguments: {},
         },
       };
@@ -175,21 +217,11 @@ describe('FlowMCPServer', () => {
         content: [
           {
             type: 'text',
-            text: 'Echo: ',
+            text: 'Error: Unknown tool: unknown-tool',
           },
         ],
+        isError: true,
       });
-    });
-
-    it('should throw error for unknown tool', async () => {
-      const request = {
-        params: {
-          name: 'unknown-tool',
-          arguments: {},
-        },
-      };
-      
-      await expect(callToolHandler(request)).rejects.toThrow('Unknown tool: unknown-tool');
     });
   });
 
