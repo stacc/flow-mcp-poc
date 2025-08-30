@@ -40,7 +40,6 @@ export class FlowMCPServer {
 
 		this.setupToolHandlers();
 		this.setupResourceHandlers();
-		this.setupPromptHandlers();
 		this.setupErrorHandling();
 	}
 
@@ -376,102 +375,6 @@ export class FlowMCPServer {
 				}
 			},
 		);
-	}
-
-	private setupPromptHandlers(): void {
-		this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
-			return {
-				prompts: [
-					{
-						name: "flow-advisor",
-						description: "Friendly guidance for flow processes",
-						arguments: [
-							{
-								name: "flowType",
-								description: "Type of flow process",
-								required: true,
-							},
-							{
-								name: "customerType",
-								description: "Type of customer: individual or business",
-								required: false,
-							},
-						],
-					},
-				],
-			};
-		});
-
-		this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-			const { name, arguments: args } = request.params;
-
-			if (name === "flow-advisor") {
-				const flowType = args?.flowType || "process";
-				const customerType = args?.customerType || "individual";
-
-				const funnyAdvice = this.generateFunnyFlowAdvice(
-					flowType,
-					customerType,
-				);
-
-				return {
-					description: `Friendly ${flowType} advice for ${customerType} customer`,
-					messages: [
-						{
-							role: "user",
-							content: {
-								type: "text",
-								text: funnyAdvice,
-							},
-						},
-					],
-				};
-			}
-
-			throw new Error(`Unknown prompt: ${name}`);
-		});
-	}
-
-	private generateFunnyFlowAdvice(
-		flowType: string,
-		customerType: string,
-	): string {
-		const greetings = [
-			"🎉 Welcome to the magical world of workflows!",
-			"🚀 Hello there, future flow navigator!",
-			"⚡ Greetings, process enthusiast!",
-		];
-
-		const customerJokes =
-			customerType === "business"
-				? [
-						"Ah, a business customer! Someone who knows that processes make the world go round (and sometimes go in circles).",
-						"Business process, eh? I see you're ready to turn your workflows into... well, hopefully streamlined success! 😄",
-						"Corporate customer detected! Time to talk serious processes with seriously organized people.",
-					]
-				: [
-						"An individual process! Perfect - just one person to navigate the workflow adventure! 😉",
-						"Personal process coming up! Don't worry, we won't judge your organizational skills... much.",
-						"Individual customer! The best kind - simple, straightforward, and hopefully good at following steps!",
-					];
-
-		const advice = [
-			`📋 **Step 1**: First, get the schema for your ${flowType} using the 'get_flow_schema' tool to understand what data is required.`,
-			`🔍 **Step 2**: Review the schema carefully - it will tell you exactly what fields and data types are needed.`,
-			`📄 **Step 3**: Gather all the required information. Better to have too much data than too little!`,
-			`✅ **Step 4**: Use the 'start_flow' tool with your flow definition name and data object.`,
-			`🎯 **Step 5**: Monitor your flow progress with 'get_flow_status' and complete tasks as they come up!`,
-		];
-
-		const disclaimer = `\n\n💡 **Friendly Reminder**: Flows are like recipes - they work best when you follow the instructions and have all the ingredients ready! 😊\n\n🤝 **Ready to start?** Use the 'get_flow_schema' tool first to understand what data you need, then use 'start_flow' with your ${flowType} details. I'll be here cheering you on (quietly, from the server room)!`;
-
-		const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-		const customerJoke =
-			customerJokes[Math.floor(Math.random() * customerJokes.length)];
-
-		return `${greeting}\n\n${customerJoke}\n\n**Your Friendly Flow Adventure Guide for ${flowType}:**\n\n${advice.join(
-			"\n\n",
-		)}${disclaimer}`;
 	}
 
 	private setupErrorHandling(): void {
