@@ -1,0 +1,31 @@
+apiVersion: components.blocc.dev/v1beta1
+kind: Backend
+metadata:
+  name: server
+spec:
+  build:
+    dockerfile: Dockerfile
+    context: ../../
+
+  ports:
+    internal: 3000
+    external: 3000
+
+  probes:
+    readiness:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    liveness:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 30
+
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3

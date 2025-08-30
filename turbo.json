@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "src/**/*.test.ts", "src/**/*.spec.ts"],
+      "outputs": ["coverage/**"]
+    },
+    "typecheck": {
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig*.json"]
+    },
+    "docker:build": {
+      "inputs": ["$TURBO_DEFAULT$", "Dockerfile", ".dockerignore"],
+      "cache": false
+    }
+  }
+}

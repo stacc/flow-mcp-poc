@@ -1,53 +1,21 @@
 {
-  "name": "flow-mcp-server",
-  "version": "1.0.0",
-  "description": "A Model Context Protocol server built with TypeScript",
-  "main": "dist/index.js",
-  "type": "module",
+  "name": "flow-mcp-poc",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "dev:http": "tsx src/http-server.ts",
-    "start": "node dist/index.js",
-    "start:http": "node dist/http-server.js",
-    "watch": "tsx watch src/index.ts",
-    "watch:http": "tsx watch src/http-server.ts",
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "server",
-    "typescript"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "@types/express": "^5.0.3",
-    "express": "^5.1.0",
-    "zod": "^3.25.67"
+    "dev": "turbo dev",
+    "start": "turbo start",
+    "test": "turbo test",
+    "format-and-lint": "pnpm --filter server format-and-lint",
+    "format-and-lint:fix": "pnpm --filter server format-and-lint:fix",
+    "typecheck": "turbo typecheck",
+    "docker:build": "pnpm --filter server docker:build"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/supertest": "^6.0.3",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
-    "eslint": "^8.0.0",
-    "supertest": "^7.1.1",
-    "tsx": "^4.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "^3.2.4"
+    "turbo": "^2.3.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.18.0",
+    "pnpm": ">=9.0.0"
   }
 }

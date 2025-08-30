@@ -1,0 +1,42 @@
+{
+	"name": "server",
+	"version": "1.0.0",
+	"description": "A Model Context Protocol server built with TypeScript",
+	"type": "module",
+	"main": "dist/index.js",
+	"scripts": {
+		"dev": "node src/index.ts",
+		"dev:http": "node src/http-server.ts",
+		"start": "node src/index.ts",
+		"start:http": "node src/http-server.ts",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest --coverage",
+		"format-and-lint": "biome check src/",
+		"format-and-lint:fix": "biome check --write src/",
+		"typecheck": "tsc --noEmit",
+		"docker:build": "docker build -t flow-mcp-server ."
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.0.0",
+		"express": "^5.1.0",
+		"zod": "^3.25.67"
+	},
+	"devDependencies": {
+		"@types/express": "^5.0.3",
+		"@types/node": "^20.0.0",
+		"@types/supertest": "^6.0.3",
+		"@typescript-eslint/eslint-plugin": "^8.35.0",
+		"@typescript-eslint/parser": "^8.35.0",
+		"@vitest/coverage-v8": "^3.2.4",
+		"@vitest/ui": "^3.2.4",
+		"eslint": "^8.0.0",
+		"supertest": "^7.1.1",
+		"typescript": "^5.0.0",
+		"vitest": "^3.2.4"
+	},
+	"engines": {
+		"node": ">=22.18.0"
+	}
+}
