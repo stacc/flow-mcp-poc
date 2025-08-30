@@ -1,36 +1,34 @@
-# Use Node 22.18+ for native TypeScript support
-FROM node:22.18-alpine
-
-# Enable corepack to use pnpm
-RUN corepack enable
-
-# Set working directory
+FROM node:22.18-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
 WORKDIR /app
 
-# Install dependencies for native compilation if needed
-RUN apk add --no-cache python3 make g++
+# --------- Pruner ------------
+FROM base AS pruner
 
-# Copy workspace and package files
-COPY ../../package.json ../../pnpm-lock.yaml ./
-COPY package.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+RUN pnpm install --frozen-lockfile
 
-# Install dependencies using pnpm
-RUN pnpm install --frozen-lockfile --prod
+COPY . .
 
-# Copy source code (using native TypeScript execution)
-COPY src/ ./src/
-COPY tsconfig.json ./
+# Prune the workspace for the server component
+RUN pnpm turbo prune --scope=server --docker
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S mcp -u 1001 -G nodejs
+# --------- Server ----------
+FROM base AS server
 
-# Change ownership of the app directory
-RUN chown -R mcp:nodejs /app
-USER mcp
+RUN apk add dumb-init
+ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 
-# Expose port
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+
+RUN NODE_ENV=development pnpm install --frozen-lockfile
+
+COPY --from=pruner /app/out/full/ .
+
+USER node
 EXPOSE 3000
 
-# Start the server using native TypeScript support
-CMD ["node", "src/http-server.ts"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["node", "components/server/src/http-server.ts"]
