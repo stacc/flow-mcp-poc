@@ -276,7 +276,6 @@ export class FlowMCPHttpServer {
 
 		this.setupToolHandlers(server);
 		this.setupResourceHandlers(server);
-		this.setupPromptHandlers(server);
 
 		return server;
 	}
@@ -671,121 +670,9 @@ export class FlowMCPHttpServer {
 		);
 	}
 
-	private setupPromptHandlers(server: McpServer): void {
-		// Register loan advisor prompt
-		server.registerPrompt(
-			"loan-advisor",
-			{
-				title: "Loan Advisor",
-				description: "Friendly and funny loan application guidance",
-				argsSchema: {
-					customerType: z
-						.string()
-						.describe("Type of customer: individual or business"),
-					loanAmount: z
-						.string()
-						.optional()
-						.describe("Desired loan amount in NOK"),
-					loanPurpose: z
-						.string()
-						.optional()
-						.describe("Purpose: PURCHASE, MOVE, or INCREASE_LOAN"),
-				},
-			},
-			async ({ customerType, loanAmount, loanPurpose }) => {
-				const loanAmountStr = loanAmount || "some money";
-				const purposeStr = loanPurpose || "buying something awesome";
-
-				const funnyAdvice = this.generateFunnyLoanAdvice(
-					customerType || "individual",
-					loanAmountStr,
-					purposeStr,
-				);
-
-				return {
-					messages: [
-						{
-							role: "user",
-							content: {
-								type: "text",
-								text: funnyAdvice,
-							},
-						},
-					],
-				};
-			},
-		);
-	}
-
-	private generateFunnyLoanAdvice(
-		customerType: string,
-		loanAmount: string,
-		loanPurpose: string,
-	): string {
-		const greetings = [
-			"🎉 Welcome to the magical world of loans!",
-			"🏦 Hello there, future borrower!",
-			"💰 Greetings, money enthusiast!",
-		];
-
-		const customerJokes =
-			customerType === "business"
-				? [
-						"Ah, a business customer! Someone who knows that money makes the world go round (and sometimes makes it go 'round in circles).",
-						"Business loan, eh? I see you're ready to turn your dreams into... well, hopefully not nightmares! 😄",
-						"Corporate customer detected! Time to talk serious money with seriously fun people.",
-					]
-				: [
-						"An individual loan! Perfect - just one person to blame when things get interesting! 😉",
-						"Personal loan coming up! Don't worry, we won't judge your spending habits... much.",
-						"Individual customer! The best kind - simple, straightforward, and hopefully good at math!",
-					];
-
-		const purposeJokes: Record<string, string[]> = {
-			PURCHASE: [
-				"Buying something? Excellent! The economy thanks you for your service! 🛍️",
-				"A purchase loan! Because sometimes 'I want it' is the best financial strategy.",
-				"Shopping with borrowed money - a time-honored tradition since... well, since money was invented!",
-			],
-			MOVE: [
-				"Moving? Remember: a house is just a very expensive box to keep your stuff in! 📦",
-				"Relocation loan! Because apparently 'staying put' isn't adventurous enough for you!",
-				"Moving loans: helping people trade one set of problems for a completely different set since forever!",
-			],
-			INCREASE_LOAN: [
-				"More money? I like your style! Go big or go home (preferably in a bigger home)! 🏠",
-				"Loan increase! Because the first loan was just the appetizer, right?",
-				"Increasing your loan? Bold move! Fortune favors the... well, hopefully you!",
-			],
-			"buying something awesome": [
-				"Something awesome? Now we're talking! Awesome things require awesome financing! ⭐",
-				"Mystery purchase! I love the suspense. Plot twist: it better be worth it!",
-				"Buying something awesome with borrowed money? You're living the dream! 🌟",
-			],
-		};
-
-		const advice = [
-			`📋 **Step 1**: Make sure you actually need ${loanAmount}. Sometimes we want things more than we need them (looking at you, gold-plated toilet seats).`,
-			`🧮 **Step 2**: Check if you can afford the monthly payments. Pro tip: your calculator is your friend, not your enemy!`,
-			`📄 **Step 3**: Gather your documents. Yes, ALL of them. Banks love paperwork almost as much as they love money.`,
-			`🔍 **Step 4**: Read the fine print. It's called 'fine' print because finding someone who actually reads it is quite... fine indeed!`,
-			`✅ **Step 5**: Apply and cross your fingers! (But don't rely on finger-crossing as your primary financial strategy.)`,
-		];
-
-		const disclaimer = `\n\n💡 **Friendly Reminder**: Loans are like relationships - they work best when you understand the commitment and can handle the monthly obligations! 😊\n\n🤝 **Ready to start?** Use the 'start_flow' tool with your loan details. I'll be here cheering you on (quietly, from the server room)!`;
-
-		const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-		const customerJoke =
-			customerJokes[Math.floor(Math.random() * customerJokes.length)];
-		const purposeJoke = (purposeJokes[loanPurpose] ||
-			purposeJokes["buying something awesome"])[0];
-
-		return `${greeting}\n\n${customerJoke}\n\n${purposeJoke}\n\n**Your Friendly Loan Adventure Guide:**\n\n${advice.join(
-			"\n\n",
-		)}${disclaimer}`;
-	}
-
-	async start(port: number = parseInt(process.env.PORT || '3000', 10)): Promise<void> {
+	async start(
+		port: number = parseInt(process.env.PORT || "3000", 10),
+	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const server = this.app.listen(port, "127.0.0.1", () => {
 				console.log(

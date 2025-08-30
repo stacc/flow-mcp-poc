@@ -4,6 +4,7 @@
 	"packageManager": "pnpm@9.12.3",
 	"scripts": {
 		"dev": "turbo dev",
+		"dev:http": "turbo dev:http",
 		"start": "turbo start",
 		"test": "turbo test",
 		"format-and-lint": "biome check .",

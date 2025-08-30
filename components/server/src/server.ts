@@ -18,7 +18,7 @@ export class FlowMCPServer {
 
 	constructor(config?: FlowApiConfig) {
 		const defaultConfig: FlowApiConfig = {
-			baseUrl: "http://localhost:1337",
+			baseUrl: "http://flow-process",
 			timeout: 30000,
 		};
 
