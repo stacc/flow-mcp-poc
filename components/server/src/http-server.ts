@@ -70,7 +70,7 @@ export class FlowMCPHttpServer {
 
 	constructor(config?: FlowApiConfig) {
 		const defaultConfig: FlowApiConfig = {
-			baseUrl: "http://localhost:1337",
+			baseUrl: "http://flow-process",
 			timeout: 30000,
 		};
 
@@ -109,12 +109,10 @@ export class FlowMCPHttpServer {
 		this.app.delete("/mcp", this.handleMcpDelete.bind(this));
 
 		// Health check
-		this.app.get("/health", (req, res) => {
-			res.json({
-				status: "ok",
-				activeConnections: this.transports.size,
-				timestamp: new Date().toISOString(),
-			});
+		this.app.get("/healthz", (req, res) => {
+			res
+				.status(200)
+				.json({ status: "ok", timestamp: new Date().toISOString() });
 		});
 
 		// Flow definitions listing
@@ -139,6 +137,7 @@ export class FlowMCPHttpServer {
 			if (sessionId && this.transports.has(sessionId)) {
 				// Reuse existing transport
 				transport = this.transports.get(sessionId)!;
+				console.info(`Reusing existing transport for session: ${sessionId}`);
 			} else if (!sessionId && isInitializeRequest(req.body)) {
 				// New initialization request
 				transport = new StreamableHTTPServerTransport({
@@ -164,11 +163,17 @@ export class FlowMCPHttpServer {
 
 				// Connect the transport to the MCP server
 				const server = this.createMCPServer();
+				console.info("Connecting MCP server to transport...");
 				await server.connect(transport);
+				console.info("Handling initialization request...");
 				await transport.handleRequest(req, res, req.body);
+				console.info(`MCP initialization response sent for new session`);
 				return;
 			} else {
 				// Invalid request - no session ID or not initialization request
+				console.warn(
+					"Invalid MCP request: no session ID or not initialization request",
+				);
 				res.status(400).json({
 					jsonrpc: "2.0",
 					error: {
@@ -181,7 +186,11 @@ export class FlowMCPHttpServer {
 			}
 
 			// Handle the request with existing transport
+			console.info(
+				`Handling MCP request with existing transport for session: ${sessionId}`,
+			);
 			await transport.handleRequest(req, res, req.body);
+			console.info(`MCP response sent for session: ${sessionId}`);
 		} catch (error) {
 			console.error("Error handling MCP request:", error);
 			if (!res.headersSent) {
@@ -674,12 +683,7 @@ export class FlowMCPHttpServer {
 		port: number = parseInt(process.env.PORT || "3000", 10),
 	): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const server = this.app.listen(port, "127.0.0.1", () => {
-				console.log(
-					`🚀 Flow MCP HTTP Server running on http://localhost:${port}`,
-				);
-				console.log(`📡 MCP endpoint: http://localhost:${port}/mcp`);
-				console.log(`❤️  Health check: http://localhost:${port}/health`);
+			const server = this.app.listen(port, "0.0.0.0", () => {
 				resolve();
 			});
 

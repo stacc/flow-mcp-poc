@@ -3,29 +3,26 @@ kind: Backend
 metadata:
   name: server
 spec:
+  resourceProfiles:
+    large:
+      replicas: 1
+      size:
+        requests:
+          cpu: 100m
+          memory: 200Mi
+        limits:
+          cpu: 150m
+          memory: 250Mi
+    small:
+      replicas: 1
+      size:
+        requests:
+          cpu: 20m
+          memory: 100Mi
   build:
     dockerfile: Dockerfile
     context: ../../
 
   ports:
     internal: 3000
-    external: 3000
 
-  probes:
-    readiness:
-      httpGet:
-        path: /health
-        port: 3000
-      initialDelaySeconds: 5
-      periodSeconds: 10
-    liveness:
-      httpGet:
-        path: /health
-        port: 3000
-      initialDelaySeconds: 10
-      periodSeconds: 30
-
-  autoscaling:
-    enabled: true
-    minReplicas: 1
-    maxReplicas: 3
