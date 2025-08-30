@@ -1,0 +1,9 @@
+apiVersion: blocc.dev/v1beta1
+kind: Module
+metadata:
+  name: flow-mcp
+  labels:
+    org: stacc
+spec:
+  components:
+    - path: components/server

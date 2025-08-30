@@ -4,22 +4,22 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "lib": ["ES2022"],
+    "types": ["vitest/globals"],
     "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
+    "rootDir": "src",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
+    "noEmit": true,
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
-    "src/**/*"
+    "src",
   ],
   "exclude": [
     "node_modules",
