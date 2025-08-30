@@ -3,20 +3,13 @@
 	"version": "1.0.0",
 	"description": "A Model Context Protocol server built with TypeScript",
 	"type": "module",
-	"main": "dist/index.js",
 	"scripts": {
 		"dev": "node src/index.ts",
 		"dev:http": "node src/http-server.ts",
 		"start": "node src/index.ts",
 		"start:http": "node src/http-server.ts",
 		"test": "vitest",
-		"test:watch": "vitest --watch",
-		"test:ui": "vitest --ui",
-		"test:coverage": "vitest --coverage",
-		"format-and-lint": "biome check src/",
-		"format-and-lint:fix": "biome check --write src/",
-		"typecheck": "tsc --noEmit",
-		"docker:build": "docker build -t flow-mcp-server ."
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.0.0",
