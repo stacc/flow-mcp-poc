@@ -50,36 +50,68 @@ describe("FlowMCPHttpServer - Full Integration", () => {
 		it("should handle complete loan application workflow", async () => {
 			// Mock data
 			const mockStartResult = {
+				_links: {
+					self: {
+						href: "/api/flows/loan-123"
+					}
+				},
 				flowId: "loan-123",
-				status: "started",
-				tasks: [
-					{ taskId: "task-1", status: "pending", taskType: "personal-info" },
-				],
+				referenceId: "LOAN-123"
 			};
 
 			const mockFlowData = {
+				_links: {
+					self: "/api/flows/loan-123",
+					tasks: {
+						href: "/api/flows/loan-123/tasks"
+					}
+				},
 				flow: {
 					flowId: "loan-123",
-					status: "active",
-					flowDefinitionId: "loan-application",
+					_meta: {
+						processDefinitionId: "loan-application",
+						processInstanceId: "instance-123",
+						processVersion: "1"
+					},
 					createdAt: "2024-01-01T00:00:00Z",
-					updatedAt: "2024-01-01T01:00:00Z",
+					flowDefinitionId: "loan-application",
+					flowNumber: 123,
+					hasErrors: false,
+					hasIncidents: false,
+					incidents: {},
+					numAttachments: 0,
+					referenceId: "LOAN-123",
+					referenceName: "Loan Application",
+					sandbox: false,
+					sandboxConfig: {},
+					status: "active" as const,
+					version: 1,
+					versionTag: null,
 					data: {
 						applicant: { nin: "12345678901" },
 						loanPurpose: "PURCHASE",
 						loanAmount: 500000,
 					},
+					updatedAt: "2024-01-01T01:00:00Z",
+					actions: ["read", "update"]
 				},
 			};
 
 			const mockFlowStatus = {
-				flow: { flowId: "loan-123", status: "active" },
+				flow: { 
+					flowId: "loan-123", 
+					flowDefinitionId: "loan-application",
+					hasErrors: false,
+					status: "active" as const 
+				},
 				tasks: [
 					{
 						taskId: "task-1",
-						status: "pending",
 						taskType: "personal-info",
+						taskCategory: "user-task" as const,
+						status: "pending" as const,
 						createdAt: "2024-01-01T00:00:00Z",
+						updatedAt: "2024-01-01T00:00:00Z"
 					},
 				],
 			};

@@ -1,6 +1,7 @@
 export interface FlowApiConfig {
 	baseUrl: string;
 	timeout?: number;
+	defaultUser?: Record<string, unknown>;
 }
 
 export interface StartFlowResponse {
