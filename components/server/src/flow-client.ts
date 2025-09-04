@@ -13,10 +13,12 @@ import type {
 export class FlowApiClient {
 	private baseUrl: string;
 	private timeout: number;
+	private defaultUser?: Record<string, unknown>;
 
 	constructor(config: FlowApiConfig) {
 		this.baseUrl = config.baseUrl.replace(/\/$/, "");
 		this.timeout = config.timeout || 30000;
+		this.defaultUser = config.defaultUser;
 	}
 
 	private async makeRequest<T>(
@@ -26,6 +28,7 @@ export class FlowApiClient {
 			headers?: Record<string, string>;
 			body?: string;
 			signal?: AbortSignal;
+			user?: Record<string, unknown>;
 		} = {},
 	): Promise<T> {
 		const url = `${this.baseUrl}${endpoint}`;
@@ -33,13 +36,20 @@ export class FlowApiClient {
 		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
 		try {
+			const user = options.user || this.defaultUser;
+			const headers: Record<string, string> = {
+				"Content-Type": "application/json",
+				...options.headers,
+			};
+			
+			if (user) {
+				headers["Flow-Process-User"] = encodeURIComponent(JSON.stringify(user));
+			}
+
 			const response = await fetch(url, {
 				...options,
 				signal: controller.signal,
-				headers: {
-					"Content-Type": "application/json",
-					...options.headers,
-				},
+				headers,
 			});
 
 			clearTimeout(timeoutId);
@@ -68,37 +78,41 @@ export class FlowApiClient {
 	async startFlow(
 		flowDefinition: string,
 		data: Record<string, unknown>,
+		user?: Record<string, unknown>,
 	): Promise<StartFlowResponse> {
 		return this.makeRequest<StartFlowResponse>(
 			`/api/flow-definitions/${flowDefinition}`,
 			{
 				method: "POST",
 				body: JSON.stringify(data),
+				user,
 			},
 		);
 	}
 
-	async getFlow(flowId: string): Promise<Flow> {
-		return this.makeRequest<Flow>(`/api/flows/${flowId}`);
+	async getFlow(flowId: string, user?: Record<string, unknown>): Promise<Flow> {
+		return this.makeRequest<Flow>(`/api/flows/${flowId}`, { user });
 	}
 
-	async getFlowStatus(flowId: string): Promise<FlowStatus> {
-		return this.makeRequest<FlowStatus>(`/api/flows/${flowId}/status`);
+	async getFlowStatus(flowId: string, user?: Record<string, unknown>): Promise<FlowStatus> {
+		return this.makeRequest<FlowStatus>(`/api/flows/${flowId}/status`, { user });
 	}
 
-	async getTask(taskId: string): Promise<TaskDetails> {
-		return this.makeRequest<TaskDetails>(`/api/tasks/${taskId}`);
+	async getTask(taskId: string, user?: Record<string, unknown>): Promise<TaskDetails> {
+		return this.makeRequest<TaskDetails>(`/api/tasks/${taskId}`, { user });
 	}
 
 	async completeTask(
 		taskId: string,
 		data: Record<string, unknown>,
+		user?: Record<string, unknown>,
 	): Promise<CompleteTaskResponse> {
 		return this.makeRequest<CompleteTaskResponse>(
 			`/api/tasks/${taskId}/complete`,
 			{
 				method: "POST",
 				body: JSON.stringify(data),
+				user,
 			},
 		);
 	}

@@ -2,8 +2,6 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
 	CallToolRequestSchema,
-	GetPromptRequestSchema,
-	ListPromptsRequestSchema,
 	ListResourcesRequestSchema,
 	ListToolsRequestSchema,
 	ReadResourceRequestSchema,
@@ -63,6 +61,11 @@ export class FlowMCPServer {
 									description:
 										"Flow input data - use get_flow_schema to get the required schema for this flow",
 								},
+								user: {
+									type: "object",
+									description:
+										"Optional user object to include in Flow-Process-User header (e.g., {id: 'user@example.com', name: 'John Doe', roles: ['admin']})",
+								},
 							},
 							required: ["flowDefinition", "data"],
 						},
@@ -76,6 +79,11 @@ export class FlowMCPServer {
 								flowId: {
 									type: "string",
 									description: "The flow ID to retrieve",
+								},
+								user: {
+									type: "object",
+									description:
+										"Optional user object to include in Flow-Process-User header for permission checks",
 								},
 							},
 							required: ["flowId"],
@@ -105,6 +113,11 @@ export class FlowMCPServer {
 									type: "string",
 									description: "The task ID to retrieve",
 								},
+								user: {
+									type: "object",
+									description:
+										"Optional user object to include in Flow-Process-User header for permission checks",
+								},
 							},
 							required: ["taskId"],
 						},
@@ -122,6 +135,11 @@ export class FlowMCPServer {
 								data: {
 									type: "object",
 									description: "Task completion data",
+								},
+								user: {
+									type: "object",
+									description:
+										"Optional user object to include in Flow-Process-User header for permission checks",
 								},
 							},
 							required: ["taskId", "data"],
@@ -192,6 +210,7 @@ export class FlowMCPServer {
 						const startResult = await this.flowClient.startFlow(
 							args.flowDefinition as string,
 							args.data as Record<string, unknown>,
+							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [
@@ -204,7 +223,10 @@ export class FlowMCPServer {
 					}
 
 					case "get_flow": {
-						const flow = await this.flowClient.getFlow(args.flowId as string);
+						const flow = await this.flowClient.getFlow(
+							args.flowId as string,
+							args.user as Record<string, unknown>,
+						);
 						return {
 							content: [
 								{
@@ -218,6 +240,7 @@ export class FlowMCPServer {
 					case "get_flow_status": {
 						const status = await this.flowClient.getFlowStatus(
 							args.flowId as string,
+							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [
@@ -230,7 +253,10 @@ export class FlowMCPServer {
 					}
 
 					case "get_task": {
-						const task = await this.flowClient.getTask(args.taskId as string);
+						const task = await this.flowClient.getTask(
+							args.taskId as string,
+							args.user as Record<string, unknown>,
+						);
 						return {
 							content: [
 								{
@@ -245,6 +271,7 @@ export class FlowMCPServer {
 						const completeResult = await this.flowClient.completeTask(
 							args.taskId as string,
 							args.data as Record<string, unknown>,
+							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [

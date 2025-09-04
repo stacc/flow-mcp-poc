@@ -127,8 +127,13 @@ describe("FlowMCPHttpServer", () => {
 
 			it("should handle start_flow tool calls", async () => {
 				const mockStartResult = {
+					_links: {
+						self: {
+							href: "/api/flows/test-flow-123"
+						}
+					},
 					flowId: "test-flow-123",
-					status: "started",
+					referenceId: "TEST-123"
 				};
 
 				mockFlowClient.startFlow.mockResolvedValue(mockStartResult);
@@ -155,9 +160,37 @@ describe("FlowMCPHttpServer", () => {
 
 			it("should handle get_flow tool calls", async () => {
 				const mockFlow = {
-					flowId: "test-flow-123",
-					status: "active",
-					data: { applicant: { nin: "12345678901" } },
+					_links: {
+						self: "/api/flows/test-flow-123",
+						tasks: {
+							href: "/api/flows/test-flow-123/tasks"
+						}
+					},
+					flow: {
+						flowId: "test-flow-123",
+						_meta: {
+							processDefinitionId: "loan-application",
+							processInstanceId: "instance-123",
+							processVersion: "1"
+						},
+						createdAt: "2024-01-01T00:00:00Z",
+						flowDefinitionId: "loan-application",
+						flowNumber: 123,
+						hasErrors: false,
+						hasIncidents: false,
+						incidents: {},
+						numAttachments: 0,
+						referenceId: "TEST-123",
+						referenceName: "Test Flow",
+						sandbox: false,
+						sandboxConfig: {},
+						status: "active" as const,
+						version: 1,
+						versionTag: null,
+						data: { applicant: { nin: "12345678901" } },
+						updatedAt: "2024-01-01T00:00:00Z",
+						actions: ["read", "update"]
+					},
 				};
 
 				mockFlowClient.getFlow.mockResolvedValue(mockFlow);
@@ -192,9 +225,37 @@ describe("FlowMCPHttpServer", () => {
 
 			it("should read flow resources", async () => {
 				const mockFlow = {
-					flowId: "test-flow-123",
-					status: "active",
-					tasks: [],
+					_links: {
+						self: "/api/flows/test-flow-123",
+						tasks: {
+							href: "/api/flows/test-flow-123/tasks"
+						}
+					},
+					flow: {
+						flowId: "test-flow-123",
+						_meta: {
+							processDefinitionId: "loan-application",
+							processInstanceId: "instance-123",
+							processVersion: "1"
+						},
+						createdAt: "2024-01-01T00:00:00Z",
+						flowDefinitionId: "loan-application",
+						flowNumber: 123,
+						hasErrors: false,
+						hasIncidents: false,
+						incidents: {},
+						numAttachments: 0,
+						referenceId: "TEST-123",
+						referenceName: "Test Flow",
+						sandbox: false,
+						sandboxConfig: {},
+						status: "active" as const,
+						version: 1,
+						versionTag: null,
+						data: {},
+						updatedAt: "2024-01-01T00:00:00Z",
+						actions: ["read", "update"]
+					},
 				};
 
 				mockFlowClient.getFlow.mockResolvedValue(mockFlow);

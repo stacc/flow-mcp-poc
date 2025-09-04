@@ -95,9 +95,13 @@ describe("HTTP MCP Protocol Implementation", () => {
 
 		it("should execute start_flow tool correctly", async () => {
 			const mockResult = {
+				_links: {
+					self: {
+						href: "/api/flows/test-flow-123"
+					}
+				},
 				flowId: "test-flow-123",
-				status: "started",
-				createdAt: "2024-01-01T00:00:00Z",
+				referenceId: "TEST-123"
 			};
 
 			mockFlowClient.startFlow.mockResolvedValue(mockResult);
@@ -192,15 +196,39 @@ describe("HTTP MCP Protocol Implementation", () => {
 
 		it("should read flow resources correctly", async () => {
 			const mockFlow = {
+				_links: {
+					self: "/api/flows/test-flow-123",
+					tasks: {
+						href: "/api/flows/test-flow-123/tasks"
+					}
+				},
 				flow: {
 					flowId: "test-flow-123",
-					status: "active",
-					flowDefinitionId: "loan-application",
+					_meta: {
+						processDefinitionId: "loan-application",
+						processInstanceId: "instance-123",
+						processVersion: "1"
+					},
 					createdAt: "2024-01-01T00:00:00Z",
+					flowDefinitionId: "loan-application",
+					flowNumber: 123,
+					hasErrors: false,
+					hasIncidents: false,
+					incidents: {},
+					numAttachments: 0,
+					referenceId: "TEST-123",
+					referenceName: "Test Flow",
+					sandbox: false,
+					sandboxConfig: {},
+					status: "active" as const,
+					version: 1,
+					versionTag: null,
 					data: {
 						applicant: { nin: "12345678901" },
 						loanAmount: 500000,
 					},
+					updatedAt: "2024-01-01T00:00:00Z",
+					actions: ["read", "update"]
 				},
 			};
 
