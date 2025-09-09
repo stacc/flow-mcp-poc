@@ -1,7 +1,6 @@
 export interface FlowApiConfig {
 	baseUrl: string;
 	timeout?: number;
-	defaultUser?: Record<string, unknown>;
 }
 
 export interface StartFlowResponse {
@@ -161,6 +160,23 @@ export interface FlowDefinition {
 	status: "active" | "inactive" | "draft";
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface FlowsQueryParams {
+	view?: string;
+	sort?: string;
+	dir?: 1 | -1;
+	[key: string]: unknown;
+}
+
+export interface FlowsResponse {
+	flows: Flow[];
+	pagination?: {
+		page: number;
+		limit: number;
+		total: number;
+		totalPages: number;
+	};
 }
 
 export interface ApiError {

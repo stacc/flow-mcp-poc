@@ -5,6 +5,8 @@ import type {
 	FlowDefinition,
 	FlowSchema,
 	FlowStatus,
+	FlowsQueryParams,
+	FlowsResponse,
 	StartFlowResponse,
 	TaskDetails,
 	TaskSchema,
@@ -13,12 +15,10 @@ import type {
 export class FlowApiClient {
 	private baseUrl: string;
 	private timeout: number;
-	private defaultUser?: Record<string, unknown>;
 
 	constructor(config: FlowApiConfig) {
 		this.baseUrl = config.baseUrl.replace(/\/$/, "");
 		this.timeout = config.timeout || 30000;
-		this.defaultUser = config.defaultUser;
 	}
 
 	private async makeRequest<T>(
@@ -28,7 +28,7 @@ export class FlowApiClient {
 			headers?: Record<string, string>;
 			body?: string;
 			signal?: AbortSignal;
-			user?: Record<string, unknown>;
+			forwardHeaders?: Record<string, string>;
 		} = {},
 	): Promise<T> {
 		const url = `${this.baseUrl}${endpoint}`;
@@ -36,14 +36,16 @@ export class FlowApiClient {
 		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
 		try {
-			const user = options.user || this.defaultUser;
 			const headers: Record<string, string> = {
 				"Content-Type": "application/json",
 				...options.headers,
 			};
-			
-			if (user) {
-				headers["Flow-Process-User"] = encodeURIComponent(JSON.stringify(user));
+
+			// Forward headers from the client request
+			if (options.forwardHeaders) {
+				for (const [key, value] of Object.entries(options.forwardHeaders)) {
+					headers[key] = value;
+				}
 			}
 
 			const response = await fetch(url, {
@@ -62,7 +64,23 @@ export class FlowApiClient {
 				};
 				throw new Error(
 					`API Error: ${response.status} - ${errorData.title || errorData.detail || errorData.message || response.statusText}`,
+					{
+						cause: errorData,
+					},
 				);
+			}
+
+			// Handle 204 No Content responses
+			if (response.status === 204) {
+				return {} as T;
+			}
+
+			// Check if response has content to parse
+			const contentType = response.headers.get('content-type');
+			if (!contentType || !contentType.includes('application/json')) {
+				// If no JSON content type, try to get text or return empty object
+				const text = await response.text();
+				return (text ? { message: text } : {}) as T;
 			}
 
 			return (await response.json()) as T;
@@ -78,41 +96,69 @@ export class FlowApiClient {
 	async startFlow(
 		flowDefinition: string,
 		data: Record<string, unknown>,
-		user?: Record<string, unknown>,
+		forwardHeaders?: Record<string, string>,
 	): Promise<StartFlowResponse> {
 		return this.makeRequest<StartFlowResponse>(
 			`/api/flow-definitions/${flowDefinition}`,
 			{
 				method: "POST",
 				body: JSON.stringify(data),
-				user,
+				forwardHeaders,
 			},
 		);
 	}
 
-	async getFlow(flowId: string, user?: Record<string, unknown>): Promise<Flow> {
-		return this.makeRequest<Flow>(`/api/flows/${flowId}`, { user });
+	async getFlow(
+		flowId: string,
+		forwardHeaders?: Record<string, string>,
+	): Promise<Flow> {
+		return this.makeRequest<Flow>(`/api/flows/${flowId}`, { forwardHeaders });
 	}
 
-	async getFlowStatus(flowId: string, user?: Record<string, unknown>): Promise<FlowStatus> {
-		return this.makeRequest<FlowStatus>(`/api/flows/${flowId}/status`, { user });
+	async getFlowStatus(
+		flowId: string,
+		forwardHeaders?: Record<string, string>,
+	): Promise<FlowStatus> {
+		return this.makeRequest<FlowStatus>(`/api/flows/${flowId}/status`, {
+			forwardHeaders,
+		});
 	}
 
-	async getTask(taskId: string, user?: Record<string, unknown>): Promise<TaskDetails> {
-		return this.makeRequest<TaskDetails>(`/api/tasks/${taskId}`, { user });
+	async getTask(
+		taskId: string,
+		forwardHeaders?: Record<string, string>,
+	): Promise<TaskDetails> {
+		return this.makeRequest<TaskDetails>(`/api/tasks/${taskId}`, {
+			forwardHeaders,
+		});
 	}
 
 	async completeTask(
 		taskId: string,
 		data: Record<string, unknown>,
-		user?: Record<string, unknown>,
+		forwardHeaders?: Record<string, string>,
 	): Promise<CompleteTaskResponse> {
 		return this.makeRequest<CompleteTaskResponse>(
 			`/api/tasks/${taskId}/complete`,
 			{
 				method: "POST",
 				body: JSON.stringify(data),
-				user,
+				forwardHeaders,
+			},
+		);
+	}
+
+	async triggerTask(
+		taskId: string,
+		data: Record<string, unknown>,
+		forwardHeaders?: Record<string, string>,
+	): Promise<CompleteTaskResponse> {
+		return this.makeRequest<CompleteTaskResponse>(
+			`/api/tasks/${taskId}/trigger`,
+			{
+				method: "POST",
+				body: JSON.stringify(data),
+				forwardHeaders,
 			},
 		);
 	}
@@ -145,5 +191,26 @@ export class FlowApiClient {
 
 	async getFlowDefinitions(): Promise<FlowDefinition[]> {
 		return this.makeRequest<FlowDefinition[]>("/api/flow-definitions");
+	}
+
+	async getFlows(
+		params?: FlowsQueryParams,
+		forwardHeaders?: Record<string, string>,
+	): Promise<FlowsResponse> {
+		let endpoint = "/api/flows";
+
+		if (params && Object.keys(params).length > 0) {
+			const searchParams = new URLSearchParams();
+			for (const [key, value] of Object.entries(params)) {
+				if (value !== undefined && value !== null) {
+					searchParams.append(key, String(value));
+				}
+			}
+			if (searchParams.toString()) {
+				endpoint += `?${searchParams.toString()}`;
+			}
+		}
+
+		return this.makeRequest<FlowsResponse>(endpoint, { forwardHeaders });
 	}
 }

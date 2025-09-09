@@ -16,7 +16,7 @@ export class FlowMCPServer {
 
 	constructor(config?: FlowApiConfig) {
 		const defaultConfig: FlowApiConfig = {
-			baseUrl: "http://flow-process",
+			baseUrl: "http://localhost:1337",
 			timeout: 30000,
 		};
 
@@ -61,11 +61,6 @@ export class FlowMCPServer {
 									description:
 										"Flow input data - use get_flow_schema to get the required schema for this flow",
 								},
-								user: {
-									type: "object",
-									description:
-										"Optional user object to include in Flow-Process-User header (e.g., {id: 'user@example.com', name: 'John Doe', roles: ['admin']})",
-								},
 							},
 							required: ["flowDefinition", "data"],
 						},
@@ -79,11 +74,6 @@ export class FlowMCPServer {
 								flowId: {
 									type: "string",
 									description: "The flow ID to retrieve",
-								},
-								user: {
-									type: "object",
-									description:
-										"Optional user object to include in Flow-Process-User header for permission checks",
 								},
 							},
 							required: ["flowId"],
@@ -113,11 +103,6 @@ export class FlowMCPServer {
 									type: "string",
 									description: "The task ID to retrieve",
 								},
-								user: {
-									type: "object",
-									description:
-										"Optional user object to include in Flow-Process-User header for permission checks",
-								},
 							},
 							required: ["taskId"],
 						},
@@ -136,10 +121,23 @@ export class FlowMCPServer {
 									type: "object",
 									description: "Task completion data",
 								},
-								user: {
+							},
+							required: ["taskId", "data"],
+						},
+					},
+					{
+						name: "trigger_task",
+						description: "Trigger a message task with the provided data",
+						inputSchema: {
+							type: "object",
+							properties: {
+								taskId: {
+									type: "string",
+									description: "The task ID to trigger",
+								},
+								data: {
 									type: "object",
-									description:
-										"Optional user object to include in Flow-Process-User header for permission checks",
+									description: "Task trigger data",
 								},
 							},
 							required: ["taskId", "data"],
@@ -193,6 +191,28 @@ export class FlowMCPServer {
 							properties: {},
 						},
 					},
+					{
+						name: "get_flows",
+						description: "List/query for flow instances with optional filtering and sorting",
+						inputSchema: {
+							type: "object",
+							properties: {
+								view: {
+									type: "string",
+									description: "Which view to use for filtering the response data",
+								},
+								sort: {
+									type: "string",
+									description: "Which field to sort results by (e.g., 'createdAt')",
+								},
+								dir: {
+									type: "number",
+									description: "Sort direction: 1 for ascending (default), -1 for descending",
+									enum: [1, -1],
+								},
+							},
+						},
+					},
 				] satisfies Tool[],
 			};
 		});
@@ -210,7 +230,6 @@ export class FlowMCPServer {
 						const startResult = await this.flowClient.startFlow(
 							args.flowDefinition as string,
 							args.data as Record<string, unknown>,
-							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [
@@ -223,10 +242,7 @@ export class FlowMCPServer {
 					}
 
 					case "get_flow": {
-						const flow = await this.flowClient.getFlow(
-							args.flowId as string,
-							args.user as Record<string, unknown>,
-						);
+						const flow = await this.flowClient.getFlow(args.flowId as string);
 						return {
 							content: [
 								{
@@ -240,7 +256,6 @@ export class FlowMCPServer {
 					case "get_flow_status": {
 						const status = await this.flowClient.getFlowStatus(
 							args.flowId as string,
-							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [
@@ -253,10 +268,7 @@ export class FlowMCPServer {
 					}
 
 					case "get_task": {
-						const task = await this.flowClient.getTask(
-							args.taskId as string,
-							args.user as Record<string, unknown>,
-						);
+						const task = await this.flowClient.getTask(args.taskId as string);
 						return {
 							content: [
 								{
@@ -271,13 +283,27 @@ export class FlowMCPServer {
 						const completeResult = await this.flowClient.completeTask(
 							args.taskId as string,
 							args.data as Record<string, unknown>,
-							args.user as Record<string, unknown>,
 						);
 						return {
 							content: [
 								{
 									type: "text",
 									text: JSON.stringify(completeResult, null, 2),
+								},
+							],
+						};
+					}
+
+					case "trigger_task": {
+						const triggerResult = await this.flowClient.triggerTask(
+							args.taskId as string,
+							args.data as Record<string, unknown>,
+						);
+						return {
+							content: [
+								{
+									type: "text",
+									text: JSON.stringify(triggerResult, null, 2),
 								},
 							],
 						};
@@ -331,6 +357,29 @@ export class FlowMCPServer {
 								{
 									type: "text",
 									text: JSON.stringify(flowDefinitions, null, 2),
+								},
+							],
+						};
+					}
+
+					case "get_flows": {
+						const params = {
+							view: args.view as string | undefined,
+							sort: args.sort as string | undefined,
+							dir: args.dir as (1 | -1) | undefined,
+						};
+						
+						// Filter out undefined values
+						const filteredParams = Object.fromEntries(
+							Object.entries(params).filter(([, value]) => value !== undefined)
+						);
+
+						const flows = await this.flowClient.getFlows(filteredParams);
+						return {
+							content: [
+								{
+									type: "text",
+									text: JSON.stringify(flows, null, 2),
 								},
 							],
 						};

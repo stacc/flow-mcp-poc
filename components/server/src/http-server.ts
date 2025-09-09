@@ -67,10 +67,12 @@ export class FlowMCPHttpServer {
 	private flowClient: FlowApiClient;
 	private transports = new Map<string, StreamableHTTPServerTransport>();
 	private eventStore: InMemoryEventStore;
+	private requestHeaders = new Map<string, Record<string, string>>();
+	private currentRequestHeaders: Record<string, string> = {};
 
 	constructor(config?: FlowApiConfig) {
 		const defaultConfig: FlowApiConfig = {
-			baseUrl: "http://flow-process",
+			baseUrl: "http://localhost:1337",
 			timeout: 30000,
 		};
 
@@ -134,10 +136,41 @@ export class FlowMCPHttpServer {
 		try {
 			let transport: StreamableHTTPServerTransport;
 
+			// Store headers from this request to be used by tool handlers
+			// Filter out HTTP-specific headers that shouldn't be forwarded
+			const excludedHeaders = new Set([
+				"host",
+				"content-length",
+				"content-type",
+				"connection",
+				"transfer-encoding",
+				"te",
+				"trailer",
+				"proxy-authorization",
+				"proxy-authenticate",
+				"upgrade",
+				"expect",
+			]);
+
+			const forwardHeaders: Record<string, string> = {};
+			for (const [key, value] of Object.entries(req.headers)) {
+				const lowerKey = key.toLowerCase();
+				if (
+					typeof value === "string" &&
+					!lowerKey.startsWith("mcp-") &&
+					!excludedHeaders.has(lowerKey)
+				) {
+					forwardHeaders[key] = value;
+				}
+			}
+
 			if (sessionId && this.transports.has(sessionId)) {
 				// Reuse existing transport
 				transport = this.transports.get(sessionId)!;
 				console.info(`Reusing existing transport for session: ${sessionId}`);
+				// Update headers for this session and current request
+				this.requestHeaders.set(sessionId, forwardHeaders);
+				this.currentRequestHeaders = forwardHeaders;
 			} else if (!sessionId && isInitializeRequest(req.body)) {
 				// New initialization request
 				transport = new StreamableHTTPServerTransport({
@@ -146,6 +179,9 @@ export class FlowMCPHttpServer {
 					onsessioninitialized: (sessionId: string) => {
 						console.info(`Session initialized with ID: ${sessionId}`);
 						this.transports.set(sessionId, transport);
+						// Store headers for the new session
+						this.requestHeaders.set(sessionId, forwardHeaders);
+						this.currentRequestHeaders = forwardHeaders;
 					},
 				});
 
@@ -157,6 +193,7 @@ export class FlowMCPHttpServer {
 							`Transport closed for session ${sid}, removing from transports map`,
 						);
 						this.transports.delete(sid);
+						this.requestHeaders.delete(sid);
 						this.eventStore.clearSession(sid);
 					}
 				};
@@ -311,6 +348,7 @@ export class FlowMCPHttpServer {
 					const startResult = await this.flowClient.startFlow(
 						flowDefinition,
 						data,
+						this.currentRequestHeaders,
 					);
 					return {
 						content: [
@@ -321,17 +359,22 @@ export class FlowMCPHttpServer {
 						],
 					};
 				} catch (error) {
-					return {
-						content: [
-							{
-								type: "text",
-								text: `Error: ${
-									error instanceof Error ? error.message : String(error)
-								}`,
-							},
-						],
-						isError: true,
-					};
+					console.error("Error in start_flow tool:", error);
+					if (error instanceof Error) {
+						const cause = error.cause as { errors?: unknown[] } | undefined;
+						return {
+							content: [
+								{
+									type: "text",
+									text: `Error: ${
+										error instanceof Error ? error.message : String(error)
+									}`,
+									errors: cause?.errors,
+								},
+							],
+							isError: true,
+						};
+					}
 				}
 			},
 		);
@@ -348,7 +391,10 @@ export class FlowMCPHttpServer {
 			},
 			async ({ flowId }) => {
 				try {
-					const flow = await this.flowClient.getFlow(flowId);
+					const flow = await this.flowClient.getFlow(
+						flowId,
+						this.currentRequestHeaders,
+					);
 					return {
 						content: [
 							{
@@ -385,7 +431,10 @@ export class FlowMCPHttpServer {
 			},
 			async ({ flowId }) => {
 				try {
-					const status = await this.flowClient.getFlowStatus(flowId);
+					const status = await this.flowClient.getFlowStatus(
+						flowId,
+						this.currentRequestHeaders,
+					);
 					return {
 						content: [
 							{
@@ -422,7 +471,10 @@ export class FlowMCPHttpServer {
 			},
 			async ({ taskId }) => {
 				try {
-					const task = await this.flowClient.getTask(taskId);
+					const task = await this.flowClient.getTask(
+						taskId,
+						this.currentRequestHeaders,
+					);
 					return {
 						content: [
 							{
@@ -463,12 +515,61 @@ export class FlowMCPHttpServer {
 					const completeResult = await this.flowClient.completeTask(
 						taskId,
 						data,
+						this.currentRequestHeaders,
 					);
 					return {
 						content: [
 							{
 								type: "text",
-								text: JSON.stringify(completeResult, null, 2),
+								text:
+									typeof completeResult === "string"
+										? completeResult
+										: JSON.stringify(completeResult, null, 2),
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error: ${
+									error instanceof Error ? error.message : String(error)
+								}`,
+							},
+						],
+						isError: true,
+					};
+				}
+			},
+		);
+
+		// Register trigger_task tool
+		server.registerTool(
+			"trigger_task",
+			{
+				title: "Trigger Task",
+				description: "Trigger a message task with the provided data",
+				inputSchema: {
+					taskId: z.string().describe("The task ID to trigger"),
+					data: z.record(z.unknown()).describe("Task trigger data"),
+				},
+			},
+			async ({ taskId, data }) => {
+				try {
+					const triggerResult = await this.flowClient.triggerTask(
+						taskId,
+						data,
+						this.currentRequestHeaders,
+					);
+					return {
+						content: [
+							{
+								type: "text",
+								text:
+									typeof triggerResult === "string"
+										? triggerResult
+										: JSON.stringify(triggerResult, null, 2),
 							},
 						],
 					};
@@ -636,6 +737,67 @@ export class FlowMCPHttpServer {
 				}
 			},
 		);
+
+		// Register get_flows tool
+		server.registerTool(
+			"get_flows",
+			{
+				title: "Get Flows",
+				description:
+					"List/query for flow instances with optional filtering and sorting",
+				inputSchema: {
+					view: z
+						.string()
+						.optional()
+						.describe("Which view to use for filtering the response data"),
+					sort: z
+						.string()
+						.optional()
+						.describe("Which field to sort results by (e.g., 'createdAt')"),
+					dir: z
+						.union([z.literal(1), z.literal(-1)])
+						.optional()
+						.describe(
+							"Sort direction: 1 for ascending (default), -1 for descending",
+						),
+				},
+			},
+			async ({ view, sort, dir }) => {
+				try {
+					const params = { view, sort, dir };
+
+					// Filter out undefined values
+					const filteredParams = Object.fromEntries(
+						Object.entries(params).filter(([, value]) => value !== undefined),
+					);
+
+					const flows = await this.flowClient.getFlows(
+						filteredParams,
+						this.currentRequestHeaders,
+					);
+					return {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify(flows, null, 2),
+							},
+						],
+					};
+				} catch (error) {
+					return {
+						content: [
+							{
+								type: "text",
+								text: `Error: ${
+									error instanceof Error ? error.message : String(error)
+								}`,
+							},
+						],
+						isError: true,
+					};
+				}
+			},
+		);
 	}
 
 	private setupResourceHandlers(server: McpServer): void {
@@ -657,7 +819,10 @@ export class FlowMCPHttpServer {
 					}
 
 					const flowId = match[1];
-					const flow = await this.flowClient.getFlow(flowId);
+					const flow = await this.flowClient.getFlow(
+						flowId,
+						this.currentRequestHeaders,
+					);
 
 					return {
 						contents: [
@@ -680,7 +845,7 @@ export class FlowMCPHttpServer {
 	}
 
 	async start(
-		port: number = parseInt(process.env.PORT || "3000", 10),
+		port: number = parseInt(process.env.PORT || "3001", 10),
 	): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const server = this.app.listen(port, "0.0.0.0", () => {
@@ -702,6 +867,7 @@ export class FlowMCPHttpServer {
 				console.log(`Closing transport for session ${sessionId}`);
 				await transport.close();
 				this.transports.delete(sessionId);
+				this.requestHeaders.delete(sessionId);
 				this.eventStore.clearSession(sessionId);
 			} catch (error) {
 				console.error(
